@@ -1,51 +1,54 @@
+import axios from "axios";
 import { NextRequest, NextResponse } from "next/server";
-import { inflateSync } from "zlib";
+import FormData from "form-data";
+import { PrismaClient } from "@prisma/client";
 
-export async function POST(req: NextRequest) {
+const client = new PrismaClient();
+
+export const POST = async (req: NextRequest) => {
   try {
     const formData = await req.formData();
-    const file = formData.get("pdf");
+    const pdfFile = formData.get("pdf");
 
-    if (!file || !(file instanceof Blob)) {
-      return NextResponse.json({ error: "No PDF uploaded" }, { status: 400 });
+    if (!pdfFile || typeof pdfFile === "string") {
+      throw new Error("Invalid or missing PDF file");
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const buffer = Buffer.from(await pdfFile.arrayBuffer());
 
-    // Convert to string to find FlateDecode stream
-    const content = buffer.toString("binary");
-
-    // Regex to extract raw FlateDecode stream
-    const streamMatch = content.match(
-      /\/FlateDecode[\s\S]*?stream\r?\n([\s\S]*?)\r?\nendstream/
-    );
-    if (!streamMatch || streamMatch.length < 2) {
-      return NextResponse.json(
-        { error: "No FlateDecode stream found" },
-        { status: 400 }
-      );
-    }
-
-    // Extract the raw stream binary (manually from original buffer)
-    const streamStart = content.indexOf(streamMatch[1]);
-    const streamEnd = streamStart + streamMatch[1].length;
-    const compressedData = buffer.subarray(streamStart, streamEnd);
-
-    // Decompress using zlib
-    const decompressed = inflateSync(compressedData);
-    const decompressedText = decompressed.toString("utf-8");
-    console.log(decompressedText);
-
-    return NextResponse.json({
-      success: true,
-      decompressed: decompressedText,
+    const uploadForm = new FormData();
+    uploadForm.append("pdf", buffer, {
+      filename: "file.pdf",
+      contentType: "application/pdf",
     });
-  } catch (err) {
-    console.error("Decompression failed:", err);
-    return NextResponse.json(
-      { error: "Failed to decompress stream" },
-      { status: 500 }
+
+    const response = await axios.post(
+      "http://127.0.0.1:5000/pdf/extract",
+      uploadForm,
+      {
+        headers: uploadForm.getHeaders(),
+      }
     );
+
+    if (response.status !== 200) {
+      throw new Error("No response from ML server");
+    }
+
+    const data: { extracted_text?: string } = response.data;
+
+    if (!data.extracted_text) {
+      throw new Error("No text extracted from the PDF");
+    }
+    await client.document.create({
+      data: {
+        Content: data.extracted_text,
+        UserId: 1,
+      },
+    });
+
+    return NextResponse.json({ text: data.extracted_text });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ message: error || "Internal error" });
   }
-}
+};
