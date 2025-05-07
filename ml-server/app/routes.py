@@ -8,12 +8,12 @@ def home():
     return render_template("status.html")
 
 
-@main.route('/predict', methods=['POST'])
+@main.route('/pdf/extract', methods=['POST'])
 def extract_text():
-    if 'pdf_file' not in request.files:
+    if 'pdf' not in request.files:
         return jsonify({'error': 'No PDF file provided'}), 400
 
-    pdf_file = request.files['pdf_file']
+    pdf_file = request.files['pdf']
 
     if pdf_file.filename == '':
         return jsonify({'error': 'No PDF file selected'}), 400
