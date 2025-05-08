@@ -5,6 +5,8 @@ import { PrismaClient } from "@prisma/client";
 
 const client = new PrismaClient();
 
+const ML_BACKEND = process.env.ML_BACKEND_URL || "http://127.0.0.1:5000";
+
 export const POST = async (req: NextRequest) => {
   try {
     const formData = await req.formData();
@@ -22,13 +24,9 @@ export const POST = async (req: NextRequest) => {
       contentType: "application/pdf",
     });
 
-    const response = await axios.post(
-      "http://127.0.0.1:5000/pdf/extract",
-      uploadForm,
-      {
-        headers: uploadForm.getHeaders(),
-      }
-    );
+    const response = await axios.post(`${ML_BACKEND}/pdf/extract`, uploadForm, {
+      headers: uploadForm.getHeaders(),
+    });
 
     if (response.status !== 200) {
       throw new Error("No response from ML server");
