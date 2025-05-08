@@ -1,7 +1,16 @@
-from flask import Flask, jsonify, request
-from app import create_app
+# app.py
 
-app = create_app()
+from flask import Flask
 
-if __name__ == '__main__':
-    app.run(debug=True)
+def create_app():
+    app = Flask(__name__)  # Create the app
+
+    # Any configuration you want to add here
+    app.config['SECRET_KEY'] = 'your-secret-key'
+
+    # Routes
+    @app.route('/')
+    def home():
+        return "Hello, World!"  # You can replace this with your actual home route
+
+    return app
