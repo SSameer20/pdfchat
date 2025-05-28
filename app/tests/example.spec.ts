@@ -1,15 +1,6 @@
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 
-test("Addition Cases", () => {
-  const number1 = 200;
-  const number2 = 300;
-  const sum = number1 + number2;
-  expect(sum).toBe(500);
-});
-
-test("Addition Cases 1", () => {
-  const number1 = 200;
-  const number2 = 300;
-  const sum = number1 + number2;
-  expect(sum).not.toBe(600);
+test("Addition Cases", async ({ page }) => {
+  await page.goto("https://presently.sameer.digital");
+  await page.screenshot({ path: "./screenshot.png", fullPage: true });
 });
